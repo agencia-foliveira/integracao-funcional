@@ -247,29 +247,29 @@ function generateCreatePatientXML(patient, medications) {
                             <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">${patient.paciente_sexo}</wsac:Valor>
                         </wsac:CampoViewModel>
                         <wsac:CampoViewModel>
-                            <wsac:NomeCampo>AutorizaContatoTelefone</wsac:NomeCampo>
-                            <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
-                        </wsac:CampoViewModel>
-                        <wsac:CampoViewModel>
-                            <wsac:NomeCampo>AutorizaContatoEmail</wsac:NomeCampo>
-                            <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
-                        </wsac:CampoViewModel>
-                        <wsac:CampoViewModel>
-                            <wsac:NomeCampo>AutorizaContatoWhatsAppSMS</wsac:NomeCampo>
-                            <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">N</wsac:Valor>                                
-                        </wsac:CampoViewModel>
-                        <wsac:CampoViewModel>
-                            <wsac:NomeCampo>PreferenciaContatoTelefone</wsac:NomeCampo>
-                            <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
-                        </wsac:CampoViewModel>
-                        <wsac:CampoViewModel>
-                            <wsac:NomeCampo>AutorizaContatoSMS</wsac:NomeCampo>
-                            <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
-                        </wsac:CampoViewModel>
-                        <wsac:CampoViewModel>
-                            <wsac:NomeCampo>AutorizaContatoCorreio</wsac:NomeCampo>
-                            <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
-                        </wsac:CampoViewModel>
+                                <wsac:NomeCampo>AutorizaContatoTelefone</wsac:NomeCampo>
+                                <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
+                            </wsac:CampoViewModel>
+                            <wsac:CampoViewModel>
+                                <wsac:NomeCampo>AutorizaContatoEmail</wsac:NomeCampo>
+                                <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
+                            </wsac:CampoViewModel>
+                            <wsac:CampoViewModel>
+                                <wsac:NomeCampo>AutorizaContatoWhatsAppSMS</wsac:NomeCampo>
+                                <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">N</wsac:Valor>
+                                <wsac:CampoViewModel>
+                                <wsac:NomeCampo>PreferenciaContatoTelefone</wsac:NomeCampo>
+                                <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
+                                </wsac:CampoViewModel>
+                            </wsac:CampoViewModel>
+                            <wsac:CampoViewModel>
+                                <wsac:NomeCampo>AutorizaContatoSMS</wsac:NomeCampo>
+                                <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
+                            </wsac:CampoViewModel>
+                            <wsac:CampoViewModel>
+                                <wsac:NomeCampo>AutorizaContatoCorreio</wsac:NomeCampo>
+                                <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">S</wsac:Valor>
+                            </wsac:CampoViewModel>
                         <wsac:CampoViewModel>
                             <wsac:NomeCampo>Email</wsac:NomeCampo>
                             <wsac:Valor i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">${patient.paciente_email}</wsac:Valor>
