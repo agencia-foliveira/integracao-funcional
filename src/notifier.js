@@ -38,4 +38,4 @@ const sendXMLtoDiscord = async (xmlContent) => {
   }
 };
 
-module.exports = { notifyError, sendDiscordAlert, sendXMLtoDiscord };
+module.exports = { sendDiscordAlert, sendXMLtoDiscord };
