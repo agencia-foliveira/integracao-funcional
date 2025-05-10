@@ -21,8 +21,13 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.VPS_SSH_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Create .env file
+        run: |
+          echo "${{ secrets.ENV_FILE }}" > .env
+
       - name: Deploy app
         run: |
+          scp -o StrictHostKeyChecking=no .env ${{ secrets.VPS_SSH_USER }}@${{ secrets.VPS_SSH_HOST }}:/root/integracao-funcional/.env
           ssh ${{ secrets.VPS_SSH_USER }}@${{ secrets.VPS_SSH_HOST }} << 'EOF'
             cd /root/integracao-funcional
             git pull origin main
