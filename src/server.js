@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const dayjs = require("dayjs");
 const { enqueueRequest } = require("./queue");
 const db = require("./db");
+const { sendDiscordAlert } = require("./notifier");
 require("dotenv").config();
 
 const app = express();
@@ -11,6 +12,15 @@ app.use(bodyParser.json());
 app.post("/cadastrar-paciente", async (req, res) => {
   try {
     await enqueueRequest(req.body);
+
+    await sendDiscordAlert(
+      `🟡 Novo Cadastro de Paciente:\n\`\`\`json\n${JSON.stringify(
+        payload,
+        null,
+        2
+      ).slice(0, 1800)}\n\`\`\``
+    );
+
     res.status(202).json({
       message: `Paciente "${req.body.paciente_nome}", CPF "${req.body.paciente_cpf}" foi salvo na fila de processamento.`,
     });

@@ -4,18 +4,6 @@ const os = require("os");
 const path = require("path");
 const FormData = require("form-data");
 
-function notifyError(message, payload, stack) {
-  const content = `❌ Erro ao processar requisição\n**Erro:** ${message}\n**Payload:**\n\`\`\`json\n${JSON.stringify(
-    payload,
-    null,
-    2
-  )}\`\`\`\n**Stack Trace:**\n\`\`\`js\n${stack.substring(
-    stack.length - 800
-  )}\`\`\``;
-
-  return axios.post(process.env.DISCORD_WEBHOOK_URL, { content });
-}
-
 function sendDiscordAlert(content) {
   return axios.post(process.env.DISCORD_WEBHOOK_URL, { content });
 }
@@ -30,7 +18,7 @@ const sendXMLtoDiscord = async (xmlContent) => {
   // Prepara o FormData pro upload
   const form = new FormData();
   form.append("file", fs.createReadStream(filePath));
-  form.append("content", `📄 Requisição SOAP anexada (ID: ${id})`);
+  form.append("content", `📄 Arquivo XML da Requisição/Resposta (ID: ${id})`);
 
   try {
     await axios.post(process.env.DISCORD_WEBHOOK_URL, form, {

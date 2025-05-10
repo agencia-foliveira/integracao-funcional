@@ -319,11 +319,7 @@ function generateCreatePatientXML(patient, medications) {
             </tem:cadastrarPaciente>
         </tem:CadastrarPaciente>
     </soap:Body>
-</soap:Envelope>`
-    .replace(/\r?\n|\r/g, "")
-    .replace(/\t/g, "")
-    .replace(/>\s+</g, "><")
-    .trim();
+</soap:Envelope>`;
 }
 
 /**

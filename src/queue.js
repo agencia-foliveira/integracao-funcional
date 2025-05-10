@@ -1,6 +1,5 @@
 const db = require("./db");
 const { sendSOAP } = require("./soapClient");
-const { notifyError, sendDiscordAlert } = require("./notifier");
 
 async function enqueueRequest(payload) {
   return new Promise((resolve, reject) => {
@@ -51,15 +50,6 @@ setInterval(() => {
                 "error",
                 row.id,
               ]);
-
-              // Notifica erro
-              await sendDiscordAlert(
-                `🔴 Erro ao cadastrar o paciente:\n\`\`\`json\n${JSON.stringify(
-                  payload,
-                  null,
-                  2
-                ).slice(0, 1800)}\n\`\`\``
-              );
             };
 
             const marcarSucesso = (mensagem) => {
