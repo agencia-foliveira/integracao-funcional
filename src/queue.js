@@ -24,13 +24,19 @@ async function processQueue() {
     );
     const patient = patients[0];
 
-    await client.query("BEGIN");
+    // await client.query("BEGIN");
 
     // Marca tentativa
     await client.query(
       `UPDATE queue SET attempts = attempts + 1 WHERE id = $1`,
       [row.id]
     );
+    const { rows: updated } = await client.query(
+      `SELECT attempts FROM queue WHERE id = $1`,
+      [row.id]
+    );
+    const currentAttempts = updated[0].attempts;
+    const isLastAttempt = currentAttempts >= 3;
 
     try {
       const response = await sendSOAP(row.payload);
@@ -54,11 +60,11 @@ async function processQueue() {
 
       if (response.status !== "0") {
         await sendDiscordAlert(
-          `📢 Paciente ${patient.name} com o CPF ${patient.cpf} falhou com o erro: ${response.message}`
+          `📢 Paciente "${patient.name}" com o CPF **${patient.cpf}** falhou com o erro: ${response.message}`
         );
       } else {
         await sendDiscordAlert(
-          `📢 Paciente ${patient.name} com o CPF ${patient.cpf} foi processado com sucesso!`
+          `📢 Paciente "${patient.name}" com o CPF **${patient.cpf}** foi processado com sucesso!`
         );
       }
     } catch (err) {
@@ -68,30 +74,35 @@ async function processQueue() {
         [row.id, err.message, err.stack]
       );
 
-      const isLastAttempt = row.attempts + 1 >= 3;
       await client.query(`UPDATE queue SET status = $1 WHERE id = $2`, [
-        isLastAttempt ? "error" : "pending",
+        "error",
         row.id,
       ]);
 
       if (isLastAttempt) {
         await sendDiscordAlert(
-          `❌ Paciente ${patient.name} com o CPF ${patient.cpf} falhou após 3 tentativas. Erro: ${err.message}`
+          `❌ Paciente "${patient.name}" com o CPF ${
+            patient.cpf
+          } falhou após 3 tentativas. Erro: ${err.message.substring(0, 1000)}`
         );
       } else {
         await sendDiscordAlert(
-          `⚠️ Paciente ${patient.name} com o CPF ${
+          `⚠️ Paciente "${patient.name}" com o CPF ${
             patient.cpf
-          } falhou na tentativa ${row.attempts + 1}. Erro: ${err.message}`
+          } falhou na tentativa ${
+            row.attempts + 1
+          }. Erro: ${err.message.substring(0, 1000)}...`
         );
       }
     }
 
-    await client.query("COMMIT");
+    // await client.query("COMMIT");
   } catch (e) {
-    await client.query("ROLLBACK");
+    // await client.query("ROLLBACK");
     console.error("Erro ao processar fila:", e);
-    await sendDiscordAlert(`❌ Erro ao processar fila: ${e.message}.`);
+    await sendDiscordAlert(
+      `❌ Erro ao processar fila: ${e.message.substring(0, 1000)}.`
+    );
   } finally {
     client.release();
   }

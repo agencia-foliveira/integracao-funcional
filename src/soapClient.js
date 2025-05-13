@@ -1,4 +1,3 @@
-const { sendDiscordAlert } = require("./notifier");
 const { sendPatientToSOAP, parseSOAPResponse } = require("./soap");
 
 async function sendSOAP(data) {
@@ -6,17 +5,18 @@ async function sendSOAP(data) {
     const response = await sendPatientToSOAP(data);
     const result = parseSOAPResponse(response);
 
-    await sendDiscordAlert(
-      `📨 Resposta SOAP recebida:\n\`\`\`json\n${JSON.stringify(
-        result,
-        null,
-        2
-      ).slice(0, 1800)}\n\`\`\``
-    );
-
-    return {};
+    return {
+      codigo: result.codigo || "0",
+      mensagem: result.mensagem || "Sucesso",
+      status: result.status || "0",
+    };
   } catch (err) {
-    throw err;
+    console.error("Error sending SOAP request:", err);
+    return {
+      codigo: "1",
+      mensagem: err || "Unknown error",
+      status: "1",
+    };
   }
 }
 

@@ -1,7 +1,7 @@
+require("dotenv").config();
 const axios = require("axios");
 const { isAxiosError } = require("axios");
 const { XMLParser } = require("fast-xml-parser");
-const { sendDiscordAlert, sendXMLtoDiscord } = require("./notifier");
 const { XMLValidator } = require("fast-xml-parser");
 
 async function consumeSOAP(xml) {
@@ -27,13 +27,6 @@ async function consumeSOAP(xml) {
   } catch (err) {
     if (isAxiosError(err)) {
       console.error("[SOAP] Axios error:", err.message);
-
-      // Envia o erro para o Discord
-      await sendDiscordAlert(`🔴 Erro na requisição SOAP: ${err.message}`);
-      // Envia o XML da requisição e resposta para o Discord
-      await sendXMLtoDiscord(xml);
-      // Envia o XML da resposta para o Discord
-      await sendXMLtoDiscord(err.response?.data);
 
       throw new Error(err.response?.data);
     }
@@ -379,34 +372,6 @@ function parseSOAPResponse(xml) {
   }
 }
 
-/**
- *
- * @param {string} xml
- * @returns {*}
- */
-function parseSOAPError(xml) {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    removeNSPrefix: false,
-    parseTagValue: true,
-  });
-
-  const json = parser.parse(xml);
-
-  const fault = json?.["s:Envelope"]?.["s:Body"]?.["s:Fault"];
-  if (!fault) return null;
-
-  const code = fault["s:Code"]?.["s:Subcode"]?.["s:Value"] || "Unknown";
-  const reason = fault["s:Reason"]?.["s:Text"] || "Sem motivo informado.";
-  const details = fault["s:Detail"];
-
-  return {
-    code,
-    reason,
-    details,
-  };
-}
-
 module.exports = {
   consumeSOAP,
   getMedications,
@@ -415,5 +380,4 @@ module.exports = {
   generateCreatePatientXML,
   sendPatientToSOAP,
   parseSOAPResponse,
-  parseSOAPError,
 };
