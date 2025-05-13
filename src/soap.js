@@ -12,12 +12,16 @@ async function consumeSOAP(xml) {
   }
 
   try {
-    const { data: response } = await axios.post(process.env.SOAP_URL, xml, {
-      headers: {
-        "Content-Type": "application/soap+xml; charset=utf-8",
-        "Content-Length": xml.length,
-      },
-    });
+    const { data: response } = await axios.post(
+      process.env.FUNCIONAL_SOAP_URL,
+      xml,
+      {
+        headers: {
+          "Content-Type": "application/soap+xml; charset=utf-8",
+          "Content-Length": xml.length,
+        },
+      }
+    );
 
     return response;
   } catch (err) {
