@@ -16,7 +16,7 @@ services:
   worker:
     build: .
     container_name: queue_worker
-    command: node src/processor.js
+    command: ["sh", "./wait-for-postgres.sh"]
     env_file: .env
     depends_on:
       - postgres
