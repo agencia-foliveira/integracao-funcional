@@ -35,4 +35,5 @@ jobs:
             docker compose build
             docker compose up -d
             docker compose exec -T app npm run migrate
+            docker compose restart queue_worker
           EOF
