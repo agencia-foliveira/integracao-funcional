@@ -23,9 +23,9 @@ async function processQueue() {
   const row = rows[0];
 
   try {
-    await client.query("BEGIN");
-
     const xml = await getPatientRequestXML(row.payload);
+
+    console.log("XML gerado:", xml);
 
     await client.query(
       `
@@ -76,10 +76,7 @@ async function processQueue() {
         `✅ Paciente **"${row.name}"** com o CPF **"${row.cpf}"** foi processado com sucesso!`
       );
     }
-
-    await client.query("COMMIT");
   } catch (e) {
-    await client.query("ROLLBACK");
     console.error("Erro ao processar fila:", e.message);
 
     await client.query(
@@ -88,7 +85,7 @@ async function processQueue() {
       SET error_details = $1, xml_response = $2, status = 'error'
       WHERE id = $3
     `,
-      [e, e.message, row.id]
+      [e.message, e.message, row.id]
     );
 
     await sendDiscordAlert(
