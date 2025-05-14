@@ -1,11 +1,11 @@
 require("dotenv").config();
 const { processQueue } = require("./queue");
 
-console.log("Queue processor started...");
+console.log("Processamento de cadastros iniciado...");
 
 setInterval(() => {
-  console.log("Checking for pending jobs...");
+  console.log("Aguardando por cadastros pendentes...");
   processQueue().catch((err) => {
-    console.error("Error processing queue:", err);
+    console.error("Erro na fila de processamento:", err);
   });
 }, 5000);

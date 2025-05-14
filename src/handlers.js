@@ -1,12 +1,9 @@
-// handlers.js
 const db = require("./db");
+const dayjs = require("dayjs");
 const { sendDiscordAlert } = require("./notifier");
 
-/**
- * Insere paciente (se ainda não existir), insere na fila e dispara alerta.
- */
 async function cadastrarPacienteHandler(req, res) {
-  const { paciente_cpf: cpf, paciente_nome: name, origin, ...rest } = req.body;
+  const { paciente_cpf: cpf, paciente_nome: name, origin } = req.body;
   const payload = { ...req.body };
 
   const client = await db.pool.connect();
@@ -14,27 +11,28 @@ async function cadastrarPacienteHandler(req, res) {
   try {
     await client.query("BEGIN");
 
-    // Inserir paciente, ignorando duplicatas por CPF
-    const pacienteResult = await client.query(
-      `INSERT INTO patients (cpf, name, origin)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (cpf) DO UPDATE SET name = EXCLUDED.name
-       RETURNING id`,
-      [cpf, name, origin || null]
-    );
-
-    const patientId = pacienteResult.rows[0].id;
-
-    // Enfileirar requisição
     await client.query(
-      `INSERT INTO queue (patient_id, payload, status)
-       VALUES ($1, $2, 'pending')`,
-      [patientId, payload]
+      `INSERT INTO queue (cpf, name, status, payload)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (cpf) 
+       DO UPDATE SET 
+         name = EXCLUDED.name,
+         payload = EXCLUDED.payload,
+         status = 'pending',
+         xml_request = NULL,
+         xml_response = NULL,
+         response_status = NULL,
+         response_message = NULL,
+         error_details = NULL
+       RETURNING id`,
+      [cpf, name, "pending", payload]
     );
 
     await client.query("COMMIT");
 
-    const message = `🟡 Novo cadastro de paciente: "${name}", CPF "${cpf}" foi salvo na fila de processamento.`;
+    const message = `🟡 Novo cadastro de paciente: "${name}", CPF "${cpf}"\n
+      \`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\`    
+    `;
 
     await sendDiscordAlert(message);
 
@@ -56,7 +54,6 @@ async function cadastrarPacienteHandler(req, res) {
  * Retorna estatísticas da integração.
  */
 async function detalhesDaIntegracaoHandler(req, res) {
-  const dayjs = require("dayjs");
   const { inicio, fim } = req.query;
 
   const dataInicio = dayjs(inicio || dayjs().startOf("month")).format(
@@ -73,20 +70,19 @@ async function detalhesDaIntegracaoHandler(req, res) {
       sucesso: 0,
       erro: 0,
       processando: 0,
-      errosDetalhados: [],
     };
 
     const contadores = await Promise.all([
       client.query(
-        `SELECT COUNT(*) FROM queue WHERE processed_at BETWEEN $1 AND $2`,
+        `SELECT COUNT(*) FROM queue WHERE created_at BETWEEN $1 AND $2`,
         [dataInicio, dataFim]
       ),
       client.query(
-        `SELECT COUNT(*) FROM queue WHERE status = 'success' AND processed_at BETWEEN $1 AND $2`,
+        `SELECT COUNT(*) FROM queue WHERE status = 'success' AND created_at BETWEEN $1 AND $2`,
         [dataInicio, dataFim]
       ),
       client.query(
-        `SELECT COUNT(*) FROM queue WHERE status = 'error' AND processed_at BETWEEN $1 AND $2`,
+        `SELECT COUNT(*) FROM queue WHERE status = 'error' AND created_at BETWEEN $1 AND $2`,
         [dataInicio, dataFim]
       ),
       client.query(
@@ -100,21 +96,6 @@ async function detalhesDaIntegracaoHandler(req, res) {
     stats.erro = Number(contadores[2].rows[0].count);
     stats.processando = Number(contadores[3].rows[0].count);
 
-    const errosDetalhados = await client.query(
-      `
-      SELECT q.id AS queue_id, p.name, p.cpf, el.error_message, el.stack_trace, q.processed_at
-      FROM error_logs el
-      JOIN queue q ON el.queue_id = q.id
-      JOIN patients p ON q.patient_id = p.id
-      WHERE q.processed_at BETWEEN $1 AND $2
-      ORDER BY q.processed_at DESC
-      LIMIT 10
-    `,
-      [dataInicio, dataFim]
-    );
-
-    stats.errosDetalhados = errosDetalhados.rows;
-
     res.status(200).json(stats);
   } catch (err) {
     console.error("Erro ao buscar detalhes:", err);
@@ -124,7 +105,43 @@ async function detalhesDaIntegracaoHandler(req, res) {
   }
 }
 
+/**
+ * Retorna os items da fila paginados com filtros de inicio e fim.
+ */
+async function listarCadastrosHandler(req, res) {
+  const { inicio, fim } = req.query;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const dataInicio = dayjs(inicio || dayjs().startOf("month")).format(
+    "YYYY-MM-DD HH:mm:ss"
+  );
+  const dataFim = dayjs(fim || dayjs().endOf("month")).format(
+    "YYYY-MM-DD HH:mm:ss"
+  );
+
+  const client = await db.pool.connect();
+  try {
+    const offset = (page - 1) * limit;
+
+    const result = await client.query(
+      `SELECT * FROM queue WHERE created_at BETWEEN $1 AND $2
+       ORDER BY created_at DESC
+       LIMIT $3 OFFSET $4`,
+      [dataInicio, dataFim, limit, offset]
+    );
+
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Erro ao buscar detalhes da fila:", err);
+    res.status(500).json({ error: "Erro ao buscar detalhes da fila." });
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   cadastrarPacienteHandler,
   detalhesDaIntegracaoHandler,
+  listarCadastrosHandler,
 };
