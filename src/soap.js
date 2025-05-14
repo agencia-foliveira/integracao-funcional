@@ -2,15 +2,8 @@ require("dotenv").config();
 const axios = require("axios");
 const { isAxiosError } = require("axios");
 const { XMLParser } = require("fast-xml-parser");
-const { XMLValidator } = require("fast-xml-parser");
 
 async function consumeSOAP(xml) {
-  const validXML = validateXML(xml);
-  if (validXML !== true) {
-    console.error("[SOAP] XML inválido:", validXML);
-    return;
-  }
-
   try {
     const { data: response } = await axios.post(
       process.env.FUNCIONAL_SOAP_URL,
@@ -26,31 +19,11 @@ async function consumeSOAP(xml) {
     return response;
   } catch (err) {
     if (isAxiosError(err)) {
-      console.error("[SOAP] Axios error:", err.message);
-
-      throw new Error(err.response?.data);
+      return Promise.reject(err.response?.data);
     }
-    throw new Error(err);
+
+    throw err;
   }
-}
-
-/**
- * Valida se o XML está bem formado
- * @param {string} xmlString
- * @returns {boolean | string} Retorna true se válido, ou o erro como string se inválido
- */
-function validateXML(xmlString) {
-  const result = XMLValidator.validate(xmlString, {
-    allowBooleanAttributes: true,
-    ignoreAttributes: false,
-    parseNodeValue: false,
-  });
-
-  if (result === true) {
-    return true;
-  }
-
-  return `Invalid XML at line ${result.err.line}, column ${result.err.col}: ${result.err.msg}`;
 }
 
 /**

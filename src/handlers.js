@@ -66,6 +66,10 @@ async function detalhesDaIntegracaoHandler(req, res) {
     "YYYY-MM-DD HH:mm:ss"
   );
 
+  console.log(
+    `Buscando detalhes da integração entre ${dataInicio} e ${dataFim}`
+  );
+
   const client = await db.pool.connect();
   try {
     const stats = {
@@ -81,6 +85,7 @@ async function detalhesDaIntegracaoHandler(req, res) {
         `SELECT COUNT(*) FROM queue WHERE processed_at BETWEEN $1 AND $2`,
         [dataInicio, dataFim]
       ),
+      // client.query(`SELECT COUNT(*) FROM queue WHERE status = 'success'`),
       client.query(
         `SELECT COUNT(*) FROM queue WHERE status = 'success' AND processed_at BETWEEN $1 AND $2`,
         [dataInicio, dataFim]
@@ -94,6 +99,11 @@ async function detalhesDaIntegracaoHandler(req, res) {
         [dataInicio, dataFim]
       ),
     ]);
+
+    // client.query(
+    //   `SELECT COUNT(*) FROM queue WHERE status = 'success' AND processed_at BETWEEN $1 AND $2`,
+    //   [dataInicio, dataFim]
+    // ),
 
     stats.total = Number(contadores[0].rows[0].count);
     stats.sucesso = Number(contadores[1].rows[0].count);

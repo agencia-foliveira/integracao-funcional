@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "worker": "node src/processor.js",
+    "dev:worker": "concurrently \"nodemon src/server.js\" \"nodemon src/processor.js\"",
     "migrate": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down"
   },
@@ -25,6 +26,7 @@
     "pg": "^8.16.0"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
     "nodemon": "^3.1.10"
   }
 }
