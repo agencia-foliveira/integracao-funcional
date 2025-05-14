@@ -1,88 +1,109 @@
-const db = require("./db");
-const { sendSOAP } = require("./soapClient");
+const { pool } = require("./db");
+const { sendDiscordAlert } = require("./notifier");
+const {
+  getPatientRequestXML,
+  registerPatient,
+  parseRegisterPatientResponse,
+} = require("./services/register-patient");
 
-async function enqueueRequest(payload) {
-  return new Promise((resolve, reject) => {
-    db.run(
-      "INSERT INTO queue (payload) VALUES (?)",
-      [JSON.stringify(payload)],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
-      }
+async function processQueue() {
+  const client = await pool.connect();
+
+  const { rows } = await client.query(
+    `
+    SELECT * FROM queue
+    WHERE status = 'pending'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `
+  );
+
+  if (rows.length === 0) return;
+
+  const row = rows[0];
+
+  try {
+    await client.query("BEGIN");
+
+    const xml = await getPatientRequestXML(row.payload);
+
+    await client.query(
+      `
+      UPDATE queue
+      SET xml_request = $1
+      WHERE id = $2
+    `,
+      [xml, row.id]
     );
-  });
+
+    const response = await registerPatient(xml);
+
+    await client.query(
+      `
+      UPDATE queue
+      SET xml_response = $1
+      WHERE id = $2
+    `,
+      [response, row.id]
+    );
+
+    const { message, status } = parseRegisterPatientResponse(response);
+
+    if (message) {
+      await client.query(
+        `
+        UPDATE queue
+        SET response_status = $1, response_message = $2, status = 'error'
+        WHERE id = $3        
+      `,
+        [status, message, row.id]
+      );
+
+      await sendDiscordAlert(
+        `⚠️ Paciente **"${row.name}"** com o CPF **"${row.cpf}"** falhou com o erro: "${message}"`
+      );
+    } else {
+      await client.query(
+        `
+        UPDATE queue
+        SET status = 'success'
+        WHERE id = $1
+      `,
+        [row.id]
+      );
+
+      await sendDiscordAlert(
+        `✅ Paciente **"${row.name}"** com o CPF **"${row.cpf}"** foi processado com sucesso!`
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    console.error("Erro ao processar fila:", e.message);
+
+    await client.query(
+      `
+      UPDATE queue
+      SET error_details = $1, xml_response = $2, status = 'error'
+      WHERE id = $3
+    `,
+      [e, e.message, row.id]
+    );
+
+    await sendDiscordAlert(
+      `⛔ Paciente **"${row.name}"** com o CPF **"${
+        row.cpf
+      }"** não foi processado.\n\`\`\`xml\n${e.message.substring(
+        0,
+        1000
+      )}\n\`\`\``
+    );
+  } finally {
+    client.release();
+  }
 }
 
-setInterval(() => {
-  db.get(
-    "SELECT * FROM queue WHERE status = 'pending' ORDER BY id ASC LIMIT 1",
-    async (err, row) => {
-      if (row) {
-        const payload = JSON.parse(row.payload);
-        const inicio = Date.now();
-
-        // Inserir na tabela integracoes
-        db.run(
-          `INSERT INTO integracoes (cpf, nome, status, mensagem) VALUES (?, ?, 'processando', '')`,
-          [payload.paciente_cpf, payload.paciente_nome],
-          async function (err) {
-            const integracaoId = this.lastID;
-
-            const marcarErro = async (erro) => {
-              const fim = Date.now();
-              const duracao = (fim - inicio) / 1000;
-
-              // Atualiza integracao com erro
-              db.run(
-                `UPDATE integracoes SET status = ?, mensagem = ?, tempo_processamento = ?, processado_em = CURRENT_TIMESTAMP WHERE id = ?`,
-                ["erro", erro.message, duracao, integracaoId]
-              );
-
-              // Registra erro detalhado
-              db.run(
-                `INSERT INTO erros_integracao (integracao_id, erro_codigo, erro_mensagem, stack_trace) VALUES (?, ?, ?, ?)`,
-                [integracaoId, erro.code || null, erro.message, erro.stack]
-              );
-
-              // Atualiza fila
-              db.run(`UPDATE queue SET status = ? WHERE id = ?`, [
-                "error",
-                row.id,
-              ]);
-            };
-
-            const marcarSucesso = (mensagem) => {
-              const fim = Date.now();
-              const duracao = (fim - inicio) / 1000;
-
-              db.run(
-                `UPDATE integracoes SET status = ?, mensagem = ?, tempo_processamento = ?, processado_em = CURRENT_TIMESTAMP WHERE id = ?`,
-                [
-                  "sucesso",
-                  mensagem || "Enviado com sucesso",
-                  duracao,
-                  integracaoId,
-                ]
-              );
-
-              db.run(`UPDATE queue SET status = ? WHERE id = ?`, [
-                "done",
-                row.id,
-              ]);
-            };
-
-            try {
-              const resposta = await sendSOAP(payload);
-              marcarSucesso(resposta); // Assumindo que o sendSOAP retorna algum conteúdo
-            } catch (e) {
-              marcarErro(e);
-            }
-          }
-        );
-      }
-    }
-  );
-}, 3000);
-
-module.exports = { enqueueRequest };
+module.exports = {
+  processQueue,
+};
