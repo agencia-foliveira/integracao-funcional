@@ -16,10 +16,14 @@ services:
   worker:
     build: .
     container_name: queue_worker
-    command: node src/processor.js
+    command: sh -c "
+      until pg_isready -h postgres -U postgres; do sleep 1; done;
+      npm run migrate;
+      node src/processor.js"
     env_file: .env
     depends_on:
       - postgres
+    restart: unless-stopped
     networks:
       - web
       - db
