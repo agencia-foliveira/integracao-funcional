@@ -29,20 +29,10 @@ jobs:
         run: |
           scp -o StrictHostKeyChecking=no .env ${{ secrets.VPS_SSH_USER }}@${{ secrets.VPS_SSH_HOST }}:/root/integracao-funcional/.env
           ssh ${{ secrets.VPS_SSH_USER }}@${{ secrets.VPS_SSH_HOST }} << 'EOF'
-            set -e
             cd /root/integracao-funcional
             git pull origin main
-
-            # Desliga e remove containers antigos
             docker compose down
-
-            # Sobe containers atualizados em background
-            docker compose up --build -d
-
-            # Aguarda o container app estar "vivo" antes da migration
-            echo "⏳ Aguardando app subir..."
-            docker compose exec -T app bash -c 'until curl -s http://localhost:${PORT} > /dev/null; do sleep 2; done'
-
-            # Roda as migrations
+            docker compose build
+            docker compose up -d
             docker compose exec -T app npm run migrate
           EOF
