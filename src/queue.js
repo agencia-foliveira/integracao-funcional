@@ -25,8 +25,6 @@ async function processQueue() {
   try {
     const xml = await getPatientRequestXML(row.payload);
 
-    console.log("XML gerado:", xml);
-
     await client.query(
       `
       UPDATE queue
